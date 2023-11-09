@@ -29,7 +29,7 @@ import (
 	"github.com/kube-bind/kube-bind/pkg/kubectl/base"
 )
 
-// BindAPIServiceOptions are the options for the kubectl-bind-apiservice command.
+// BindAPIServiceOptions are the options for the kubectl-rancher-bind command.
 type BindAPIServiceOptions struct {
 	Options *base.Options
 	Logs    *logs.Options
