@@ -1,7 +1,7 @@
 builds:
-- id: "kubectl-resource-bind"
-  main: ./cmd/kubectl-resource-bind
-  binary: bin/kubectl-resource-bind
+- id: "kubectl-rancher-bind"
+  main: ./cmd/kubectl-rancher-bind
+  binary: bin/kubectl-rancher-bind
   ldflags:
   - "{{ .Env.LDFLAGS }}"
   goos:
@@ -18,19 +18,19 @@ builds:
   - goos: windows
     goarch: ppc64le
 archives:
-- id: kubectl-resource-bind
+- id: kubectl-rancher-bind
   builds:
-  - kubectl-resource-bind
-  name_template: "kubectl-resource-bind_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - kubectl-rancher-bind
+  name_template: "kubectl-rancher-bind_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 release:
   prerelease: auto
   mode: keep-existing
 
 krews:
-- name: bind
+- name: rancher-bind
   ids:
-  - kubectl-resource-bind
-  index:
+  - kubectl-rancher-bind
+  repository:
     owner: Danil-Grigorev
     name: rancher-bind
     token: "{{ .Env.GITHUB_TOKEN }}"
