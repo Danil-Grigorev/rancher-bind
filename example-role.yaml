@@ -1,0 +1,11 @@
+apiVersion: management.cattle.io/v3
+kind: GlobalRole
+metadata:
+  name: rancher-bind
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - '*'
