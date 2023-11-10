@@ -24,12 +24,15 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/component-base/logs"
 	logsv1 "k8s.io/component-base/logs/api/v1"
 
 	apis "github.com/Danil-Grigorev/rancher-bind/pkg/apis"
+	managementv3 "github.com/Danil-Grigorev/rancher-bind/pkg/apis/rancher/management/v3"
 
 	"github.com/kube-bind/kube-bind/pkg/kubectl/base"
 )
@@ -46,10 +49,15 @@ type BindAPIServiceOptions struct {
 
 // NewRancherBindOptions returns new BindAPIServiceOptions.
 func NewRancherBindOptions(streams genericclioptions.IOStreams) *BindAPIServiceOptions {
-	return &BindAPIServiceOptions{
+	options := &BindAPIServiceOptions{
 		Options: base.NewOptions(streams),
 		Logs:    logs.NewOptions(),
+		Scheme:  runtime.NewScheme(),
 	}
+
+	utilruntime.Must(managementv3.AddToScheme(options.Scheme))
+
+	return options
 }
 
 // AddCmdFlags binds fields to cmd's flagset.
@@ -133,7 +141,7 @@ func (b *BindAPIServiceOptions) Run(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Printf("%s", config.Config)
+	fmt.Printf("%s\n", config.Config)
 	return nil
 }
 
