@@ -85,14 +85,12 @@ func (b *BindAPIServiceOptions) Validate() error {
 // Run starts the kubeconfig generation process.
 //
 // Flow:
-// - Fetch the setting pointing to the rancher url
+// - Fetch the setting pointing to the rancher url.
 // - Create a GlobalRole resource.
 // - Create a User resource, with a generated password.
 // - Create a global role binding with sufficient permissions to obtain the token.
-//
-// - Authenticate as the user, using https://<rancher-url>/v3-public/localProviders/local?action=login, collect the new user token.
-// - Collect the kubeconfig generated from the given token: `curl -s -u <token> https://<rancher-url>/v3/clusters/local?action=generateKubeconfig -X POST -H 'content-type: application/json' --insecure | jq -r .config`
-// - Remove the user password to prevent further authentication.
+// - Authenticate as the user.
+// - Collect the kubeconfig generated from the given token.
 // - Remove the temporary GlobalRole and binding.
 // - Create the provided ClusterRole from file, add a role binding.
 func (b *BindAPIServiceOptions) Run(ctx context.Context) error {
@@ -116,17 +114,17 @@ func (b *BindAPIServiceOptions) Run(ctx context.Context) error {
 		return err
 	}
 
-	_, err = CreateClusterRole(ctx, cl, user)
+	role, err := CreateClusterRole(ctx, cl, user)
 	if err != nil {
 		return err
 	}
-	// defer delete(role)
+	defer delete(ctx, cl, role)
 
-	_, err = CreateRoleBinding(ctx, cl, user)
+	binding, err := CreateRoleBinding(ctx, cl, user)
 	if err != nil {
 		return err
 	}
-	// defer delete(binding)
+	defer delete(ctx, cl, binding)
 
 	token, err := AuthenticateUser(serverUrl, &apis.Login{
 		Username: user.Username,
@@ -141,7 +139,11 @@ func (b *BindAPIServiceOptions) Run(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Printf("%s\n", config.Config)
+	if err := ApplyUserGlobalRole(ctx, cl, user.Username, b.file); err != nil {
+		return err
+	}
+
+	fmt.Printf("%s", config.Config)
 	return nil
 }
 
