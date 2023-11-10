@@ -1,8 +1,14 @@
 package plugin
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/sethvargo/go-password/password"
 	"golang.org/x/crypto/bcrypt"
@@ -10,6 +16,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
+	apis "github.com/Danil-Grigorev/rancher-bind/pkg/apis"
 	managementv3 "github.com/Danil-Grigorev/rancher-bind/pkg/apis/rancher/management/v3"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,13 +44,14 @@ func HashPasswordString(password string) (string, error) {
 	return string(hash), nil
 }
 
-func GenerateRandomPassword() (string, error) {
+func GenerateRandomPassword() (string, string, error) {
 	password, err := password.Generate(64, 10, 10, false, false)
 	if err != nil {
-		return "", fmt.Errorf("problem generating password: %w", err)
+		return "", "", fmt.Errorf("problem generating password: %w", err)
 	}
 
-	return HashPasswordString(password)
+	hash, err := HashPasswordString(password)
+	return password, hash, err
 }
 
 func createOrUpdate(ctx context.Context, cl client.Client, obj client.Object) error {
@@ -63,18 +71,13 @@ func createOrUpdate(ctx context.Context, cl client.Client, obj client.Object) er
 	return nil
 }
 
-func CreateUser(ctx context.Context, cl client.Client) (*managementv3.User, error) {
-	pass, err := GenerateRandomPassword()
-	if err != nil {
-		return nil, err
-	}
-
+func CreateUser(ctx context.Context, cl client.Client, passwordHash string) (*managementv3.User, error) {
 	user := &managementv3.User{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: commonName,
 		},
 		Username: commonName,
-		Password: pass,
+		Password: passwordHash,
 	}
 
 	if err := createOrUpdate(ctx, cl, user); err == nil {
@@ -148,4 +151,75 @@ func CreateRoleBinding(ctx context.Context, cl client.Client, user *managementv3
 	}
 
 	return binding, nil
+}
+
+func AuthenticateUser(serverUrl string, requestBody *apis.Login) (*apis.LoginResponse, error) {
+	loginURL := serverUrl + "/v3-public/localProviders/local?action=login"
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}}
+
+	requestDataJSON, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("Error marshaling login data: %w", err)
+	}
+
+	resp, err := client.Post(loginURL, "application/json", bytes.NewBuffer(requestDataJSON))
+	if err != nil {
+		return nil, fmt.Errorf("downloading token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading token: %w", err)
+	}
+
+	response := &apis.LoginResponse{}
+	if err := json.Unmarshal(data, response); err != nil {
+		return nil, fmt.Errorf("Error parsing the login response: %w", err)
+	}
+
+	return response, nil
+}
+
+func prepare(req *http.Request, token string) {
+	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(token)))
+	req.Header.Set("Content-Type", "application/json")
+}
+
+func CollectKubeconfig(serverUrl, token string) (*apis.ConfigResponse, error) {
+	kubeconfigURL := serverUrl + "/v3/clusters/local?action=generateKubeconfig"
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}}
+
+	req, err := http.NewRequest("POST", kubeconfigURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	prepare(req, token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("downloading kubeconfig: %w", err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading kubeconfig: %w", err)
+	}
+
+	response := &apis.ConfigResponse{}
+	if err := json.Unmarshal(data, response); err != nil {
+		return nil, fmt.Errorf("Error parsing the kubeconfig response: %w", err)
+	}
+
+	return response, nil
 }
