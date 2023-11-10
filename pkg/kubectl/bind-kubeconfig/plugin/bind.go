@@ -17,6 +17,7 @@ limitations under the License.
 package plugin
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -35,6 +36,9 @@ import (
 	managementv3 "github.com/Danil-Grigorev/rancher-bind/pkg/apis/rancher/management/v3"
 
 	"github.com/kube-bind/kube-bind/pkg/kubectl/base"
+	apiyaml "k8s.io/apimachinery/pkg/util/yaml"
+	clientcmdapiv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	yaml "sigs.k8s.io/yaml"
 )
 
 // BindAPIServiceOptions are the options for the kubectl-rancher-bind command.
@@ -44,7 +48,8 @@ type BindAPIServiceOptions struct {
 
 	*runtime.Scheme
 
-	file string
+	file     string
+	insecure bool
 }
 
 // NewRancherBindOptions returns new BindAPIServiceOptions.
@@ -66,6 +71,7 @@ func (b *BindAPIServiceOptions) AddCmdFlags(cmd *cobra.Command) {
 	logsv1.AddFlags(b.Logs, cmd.Flags())
 
 	cmd.Flags().StringVarP(&b.file, "file", "f", b.file, "A file with a GlobalRole manifest")
+	cmd.Flags().BoolVarP(&b.insecure, "insecure-skip-tls-verify", "i", b.insecure, "Sets the insecure-skip-tls-verify flag in the generated kubeconfig")
 }
 
 // Complete ensures all fields are initialized.
@@ -143,7 +149,10 @@ func (b *BindAPIServiceOptions) Run(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Printf("%s", config.Config)
+	if err := b.DisplayKubeconfig(config); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -154,4 +163,28 @@ func (b *BindAPIServiceOptions) GetClient() (client.Client, error) {
 	}
 
 	return client.New(config, client.Options{Scheme: b.Scheme})
+}
+
+func (b *BindAPIServiceOptions) DisplayKubeconfig(config *apis.ConfigResponse) error {
+	cfg := &clientcmdapiv1.Config{}
+
+	decoder := apiyaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(config.Config)), 1000)
+	if err := decoder.Decode(cfg); err != nil {
+		return fmt.Errorf("unable to decode generated kubeconfig: %w", err)
+	}
+
+	if b.insecure {
+		for i := range cfg.Clusters {
+			cfg.Clusters[i].Cluster.InsecureSkipTLSVerify = true
+			cfg.Clusters[i].Cluster.CertificateAuthorityData = nil
+		}
+	}
+
+	if result, err := yaml.Marshal(cfg); err != nil {
+		return fmt.Errorf("unable to display generated kubeconfig: %w", err)
+	} else {
+		fmt.Printf("%s", result)
+	}
+
+	return nil
 }
