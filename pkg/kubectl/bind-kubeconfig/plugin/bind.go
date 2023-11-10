@@ -19,6 +19,7 @@ package plugin
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +28,8 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/component-base/logs"
 	logsv1 "k8s.io/component-base/logs/api/v1"
+
+	apis "github.com/Danil-Grigorev/rancher-bind/pkg/apis"
 
 	"github.com/kube-bind/kube-bind/pkg/kubectl/base"
 )
@@ -95,23 +98,42 @@ func (b *BindAPIServiceOptions) Run(ctx context.Context) error {
 		return err
 	}
 
-	_, err := CreateUser(ctx, cl)
+	password, hash, err := GenerateRandomPassword()
 	if err != nil {
 		return err
 	}
 
-	role, err := CreateClusterRole(ctx, cl, user)
+	user, err := CreateUser(ctx, cl, hash)
+	if err != nil {
+		return err
+	}
+
+	_, err = CreateClusterRole(ctx, cl, user)
 	if err != nil {
 		return err
 	}
 	// defer delete(role)
 
-	binding, err := CreateRoleBinding(ctx, cl, user)
+	_, err = CreateRoleBinding(ctx, cl, user)
 	if err != nil {
 		return err
 	}
 	// defer delete(binding)
 
+	token, err := AuthenticateUser(serverUrl, &apis.Login{
+		Username: user.Username,
+		Password: password,
+	})
+	if err != nil {
+		return err
+	}
+
+	config, err := CollectKubeconfig(serverUrl, token.Token)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%s", config.Config)
 	return nil
 }
 
