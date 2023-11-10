@@ -56,13 +56,13 @@ func GenerateRandomPassword() (string, string, error) {
 
 func createOrUpdate(ctx context.Context, cl client.Client, obj client.Object) error {
 	err := cl.Create(ctx, obj)
-	if err == nil {
+	if err != nil {
 		return nil
 	}
 
 	if apierrors.IsAlreadyExists(err) {
-		if err := cl.Update(ctx, user); err != nil {
-			return fmt.Errorf("Unable to update existing object: %w", err)
+		if err := cl.Update(ctx, obj); err != nil {
+			return fmt.Errorf("unable to update existing object: %w", err)
 		}
 
 		return nil
@@ -80,8 +80,8 @@ func CreateUser(ctx context.Context, cl client.Client, passwordHash string) (*ma
 		Password: passwordHash,
 	}
 
-	if err := createOrUpdate(ctx, cl, user); err == nil {
-		return nil, fmt.Errorf("Unable to create a new user: %w", err)
+	if err := createOrUpdate(ctx, cl, user); err != nil {
+		return nil, fmt.Errorf("unable to create a new user: %w", err)
 	}
 
 	return user, nil
@@ -97,7 +97,7 @@ func ResetPassword(ctx context.Context, cl client.Client) error {
 	}
 
 	if err := cl.Update(ctx, user); err != nil {
-		return fmt.Errorf("Unable to reset user password: %w", err)
+		return fmt.Errorf("unable to reset user password: %w", err)
 	}
 
 	return nil
@@ -130,8 +130,8 @@ func CreateClusterRole(ctx context.Context, cl client.Client, user *managementv3
 		},
 	}
 
-	if err := createOrUpdate(ctx, cl, role); err == nil {
-		return nil, fmt.Errorf("Unable to create a new role: %w", err)
+	if err := createOrUpdate(ctx, cl, role); err != nil {
+		return nil, fmt.Errorf("unable to create a new role: %w", err)
 	}
 
 	return role, nil
@@ -146,8 +146,8 @@ func CreateRoleBinding(ctx context.Context, cl client.Client, user *managementv3
 		UserName:       user.Name,
 	}
 
-	if err := createOrUpdate(ctx, cl, binding); err == nil {
-		return nil, fmt.Errorf("Unable to create a new role binding: %w", err)
+	if err := createOrUpdate(ctx, cl, binding); err != nil {
+		return nil, fmt.Errorf("unable to create a new role binding: %w", err)
 	}
 
 	return binding, nil
@@ -163,7 +163,7 @@ func AuthenticateUser(serverUrl string, requestBody *apis.Login) (*apis.LoginRes
 
 	requestDataJSON, err := json.Marshal(requestBody)
 	if err != nil {
-		return nil, fmt.Errorf("Error marshaling login data: %w", err)
+		return nil, fmt.Errorf("error marshaling login data: %w", err)
 	}
 
 	resp, err := client.Post(loginURL, "application/json", bytes.NewBuffer(requestDataJSON))
@@ -179,7 +179,7 @@ func AuthenticateUser(serverUrl string, requestBody *apis.Login) (*apis.LoginRes
 
 	response := &apis.LoginResponse{}
 	if err := json.Unmarshal(data, response); err != nil {
-		return nil, fmt.Errorf("Error parsing the login response: %w", err)
+		return nil, fmt.Errorf("error parsing the login response: %w", err)
 	}
 
 	return response, nil
@@ -218,7 +218,7 @@ func CollectKubeconfig(serverUrl, token string) (*apis.ConfigResponse, error) {
 
 	response := &apis.ConfigResponse{}
 	if err := json.Unmarshal(data, response); err != nil {
-		return nil, fmt.Errorf("Error parsing the kubeconfig response: %w", err)
+		return nil, fmt.Errorf("error parsing the kubeconfig response: %w", err)
 	}
 
 	return response, nil
