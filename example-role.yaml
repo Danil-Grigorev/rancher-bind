@@ -1,7 +1,7 @@
 apiVersion: management.cattle.io/v3
 kind: GlobalRole
 metadata:
-  name: rancher-bind
+  name: cluster-admin-bind
 rules:
 - apiGroups:
   - '*'
