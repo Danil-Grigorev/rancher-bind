@@ -7,4 +7,10 @@ layout:
 - go.kubebuilder.io/v4
 projectName: rancher-bind
 repo: github.com/Danil-Grigorev/rancher-bind
+resources:
+- controller: true
+  domain: kube-bind.io
+  group: kube-bind.io
+  kind: RancherBind
+  version: v1alpha1
 version: "3"
