@@ -18,12 +18,62 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/kube-bind/kube-bind/contrib/example-backend/controllers/clusterbinding"
+	"github.com/kube-bind/kube-bind/contrib/example-backend/controllers/serviceexport"
+	"github.com/kube-bind/kube-bind/contrib/example-backend/controllers/serviceexportrequest"
+	"github.com/kube-bind/kube-bind/contrib/example-backend/controllers/servicenamespace"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	kubebindv1alpha1 "github.com/kube-bind/kube-bind/pkg/apis/kubebind/v1alpha1"
 )
+
+type ThreadedRunable interface {
+	// Start starts running the component.  The component will stop running
+	// when the context is closed. Start blocks until the context is closed or
+	// an error occurs.
+	Start(context.Context, int)
+}
+
+type Threaded struct {
+	threads  int
+	runnable ThreadedRunable
+}
+
+func NewThreaded(runnable ThreadedRunable, threads int) *Threaded {
+	return &Threaded{
+		threads:  threads,
+		runnable: runnable,
+	}
+}
+
+func (t *Threaded) Start(ctx context.Context) error {
+	t.runnable.Start(ctx, t.threads)
+	return nil
+}
+
+type InformerRunnable interface {
+	Start(stopCh <-chan struct{})
+}
+
+type Informer struct {
+	informer InformerRunnable
+}
+
+func NewInformer(informer InformerRunnable) *Informer {
+	return &Informer{
+		informer: informer,
+	}
+}
+
+func (i *Informer) Start(ctx context.Context) error {
+	i.informer.Start(ctx.Done())
+	return nil
+}
 
 // RancherBindReconciler reconciles a RancherBind object
 type RancherBindReconciler struct {
@@ -31,9 +81,21 @@ type RancherBindReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=kube-bind.io.kube-bind.io,resources=rancherbinds,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=kube-bind.io.kube-bind.io,resources=rancherbinds/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=kube-bind.io.kube-bind.io,resources=rancherbinds/finalizers,verbs=update
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiservicebindings,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiservicebindings/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiservicebindings/finalizers,verbs=update
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiserviceexportrequests,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiserviceexportrequests/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiserviceexportrequests/finalizers,verbs=update
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiserviceexports,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiserviceexports/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiserviceexports/finalizers,verbs=update
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiservicenamespaces,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiservicenamespaces/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiservicenamespaces/finalizers,verbs=update
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiservices,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiservices/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kube-bind.io,resources=apiservices/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -54,8 +116,68 @@ func (r *RancherBindReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *RancherBindReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
-		// For().
-		Complete(r)
+	config, err := NewConfig()
+	if err != nil {
+		return fmt.Errorf("unable to get config: %w", err)
+	}
+
+	// construct controllers
+	clusterBinding, err := clusterbinding.NewController(
+		config.ClientConfig,
+		kubebindv1alpha1.NamespacedScope,
+		config.BindInformers.KubeBind().V1alpha1().ClusterBindings(),
+		config.BindInformers.KubeBind().V1alpha1().APIServiceExports(),
+		config.KubeInformers.Rbac().V1().ClusterRoles(),
+		config.KubeInformers.Rbac().V1().ClusterRoleBindings(),
+		config.KubeInformers.Rbac().V1().RoleBindings(),
+		config.KubeInformers.Core().V1().Namespaces(),
+	)
+	if err != nil {
+		return fmt.Errorf("error setting up ClusterBinding Controller: %w", err)
+	}
+
+	serviceNamespace, err := servicenamespace.NewController(
+		config.ClientConfig,
+		kubebindv1alpha1.NamespacedScope,
+		config.BindInformers.KubeBind().V1alpha1().APIServiceNamespaces(),
+		config.BindInformers.KubeBind().V1alpha1().ClusterBindings(),
+		config.BindInformers.KubeBind().V1alpha1().APIServiceExports(),
+		config.KubeInformers.Core().V1().Namespaces(),
+		config.KubeInformers.Rbac().V1().Roles(),
+		config.KubeInformers.Rbac().V1().RoleBindings(),
+	)
+	if err != nil {
+		return fmt.Errorf("error setting up APIServiceNamespace Controller: %w", err)
+	}
+	serviceExport, err := serviceexport.NewController(
+		config.ClientConfig,
+		config.BindInformers.KubeBind().V1alpha1().APIServiceExports(),
+		config.ApiextensionsInformers.Apiextensions().V1().CustomResourceDefinitions(),
+	)
+	if err != nil {
+		return fmt.Errorf("error setting up APIServiceExport Controller: %w", err)
+	}
+
+	serviceExportRequest, err := serviceexportrequest.NewController(
+		config.ClientConfig,
+		kubebindv1alpha1.NamespacedScope,
+		config.BindInformers.KubeBind().V1alpha1().APIServiceExportRequests(),
+		config.BindInformers.KubeBind().V1alpha1().APIServiceExports(),
+		config.ApiextensionsInformers.Apiextensions().V1().CustomResourceDefinitions(),
+	)
+	if err != nil {
+		return fmt.Errorf("error setting up ServiceExportRequest Controller: %w", err)
+	}
+
+	mgr.Add(NewThreaded(clusterBinding, 1))
+	mgr.Add(NewThreaded(serviceNamespace, 1))
+	mgr.Add(NewThreaded(serviceExport, 1))
+	mgr.Add(NewThreaded(serviceExportRequest, 1))
+
+	// start informer factories
+	mgr.Add(NewInformer(config.KubeInformers))
+	mgr.Add(NewInformer(config.BindInformers))
+	mgr.Add(NewInformer(config.ApiextensionsInformers))
+
+	return nil
 }
