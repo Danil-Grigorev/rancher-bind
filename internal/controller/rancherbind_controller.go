@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kube-bind/kube-bind/contrib/example-backend/controllers/clusterbinding"
 	"github.com/kube-bind/kube-bind/contrib/example-backend/controllers/serviceexport"
 	"github.com/kube-bind/kube-bind/contrib/example-backend/controllers/serviceexportrequest"
 	"github.com/kube-bind/kube-bind/contrib/example-backend/controllers/servicenamespace"
@@ -96,6 +95,15 @@ type RancherBindReconciler struct {
 //+kubebuilder:rbac:groups=kube-bind.io,resources=apiservices,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kube-bind.io,resources=apiservices/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=kube-bind.io,resources=apiservices/finalizers,verbs=update
+//+kubebuilder:rbac:groups=kube-bind.io,resources=clusterbindings,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kube-bind.io,resources=clusterbindings/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kube-bind.io,resources=clusterbindings/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;list;watch
+//+kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -121,24 +129,9 @@ func (r *RancherBindReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("unable to get config: %w", err)
 	}
 
-	// construct controllers
-	clusterBinding, err := clusterbinding.NewController(
-		config.ClientConfig,
-		kubebindv1alpha1.NamespacedScope,
-		config.BindInformers.KubeBind().V1alpha1().ClusterBindings(),
-		config.BindInformers.KubeBind().V1alpha1().APIServiceExports(),
-		config.KubeInformers.Rbac().V1().ClusterRoles(),
-		config.KubeInformers.Rbac().V1().ClusterRoleBindings(),
-		config.KubeInformers.Rbac().V1().RoleBindings(),
-		config.KubeInformers.Core().V1().Namespaces(),
-	)
-	if err != nil {
-		return fmt.Errorf("error setting up ClusterBinding Controller: %w", err)
-	}
-
 	serviceNamespace, err := servicenamespace.NewController(
 		config.ClientConfig,
-		kubebindv1alpha1.NamespacedScope,
+		kubebindv1alpha1.ClusterScope,
 		config.BindInformers.KubeBind().V1alpha1().APIServiceNamespaces(),
 		config.BindInformers.KubeBind().V1alpha1().ClusterBindings(),
 		config.BindInformers.KubeBind().V1alpha1().APIServiceExports(),
@@ -169,15 +162,14 @@ func (r *RancherBindReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("error setting up ServiceExportRequest Controller: %w", err)
 	}
 
-	mgr.Add(NewThreaded(clusterBinding, 1))
-	mgr.Add(NewThreaded(serviceNamespace, 1))
-	mgr.Add(NewThreaded(serviceExport, 1))
-	mgr.Add(NewThreaded(serviceExportRequest, 1))
-
 	// start informer factories
 	mgr.Add(NewInformer(config.KubeInformers))
 	mgr.Add(NewInformer(config.BindInformers))
 	mgr.Add(NewInformer(config.ApiextensionsInformers))
+
+	mgr.Add(NewThreaded(serviceNamespace, 1))
+	mgr.Add(NewThreaded(serviceExport, 1))
+	mgr.Add(NewThreaded(serviceExportRequest, 1))
 
 	return nil
 }
