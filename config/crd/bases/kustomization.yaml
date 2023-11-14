@@ -1,0 +1,7 @@
+resources:
+- kube-bind.io_apiservices.yaml
+- kube-bind.io_apiservicebindings.yaml
+- kube-bind.io_apiserviceexportrequests.yaml
+- kube-bind.io_apiserviceexports.yaml
+- kube-bind.io_apiservicenamespaces.yaml
+- kube-bind.io_clusterbindings.yaml

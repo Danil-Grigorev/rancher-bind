@@ -1,0 +1,230 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiservicebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiservicebindings/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiservicebindings/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiserviceexportrequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiserviceexportrequests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiserviceexportrequests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiserviceexports
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiserviceexports/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiserviceexports/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiservicenamespaces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiservicenamespaces/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiservicenamespaces/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiservices/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - apiservices/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - clusterbindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - clusterbindings/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kube-bind.io
+  resources:
+  - clusterbindings/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
