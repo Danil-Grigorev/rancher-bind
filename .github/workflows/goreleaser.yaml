@@ -27,7 +27,7 @@ jobs:
       run: |
         echo "OWNER=$(echo $GITHUB_ACTOR | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
     - name: Set IMG value
-      run: echo IMG=ghcr.io/${{ env.OWNER }}/rancher-backend:${{ github.ref_name }} >> $GITHUB_ENV
+      run: echo "IMG=ghcr.io/${{ env.OWNER }}/rancher-backend:${{ github.ref_name }}" >> $GITHUB_ENV
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v3
       with:
@@ -37,6 +37,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KREW_GITHUB_TOKEN: ${{ secrets.KREW_GITHUB_TOKEN }}
+        IMG: ${{ env.IMG }}
     - uses: cytopia/upload-artifact-retry-action@v0.1.2
       if: ${{ always() }}
       with:

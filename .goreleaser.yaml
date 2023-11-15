@@ -1,3 +1,6 @@
+env:
+  - IMG={{ .Env.IMG }}
+
 before:
   hooks:
     - make release-manifests

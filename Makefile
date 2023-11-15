@@ -170,6 +170,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 .PHONY: release-manifests
 release-manifests: kustomize $(KUSTOMIZE) yq $(RELEASE_DIR) ## Builds the manifests to publish with a release
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/rancher-backend.yaml
 	cd $(RELEASE_DIR) && $(HACK_DIR)/yq-split.sh $(YQ) rancher-backend.yaml
 	rm $(RELEASE_DIR)/rancher-backend.yaml
