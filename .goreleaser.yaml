@@ -1,3 +1,7 @@
+before:
+  hooks:
+    - make release-manifests
+
 builds:
 - id: "kubectl-rancher-bind"
   main: ./cmd/kubectl-rancher-bind
@@ -17,11 +21,34 @@ builds:
     goarch: ppc64le
   - goos: windows
     goarch: ppc64le
+- id: "rancher-backend"
+  main: ./cmd/rancher-backend
+  binary: bin/rancher-backend
+  ldflags:
+  - "{{ .Env.LDFLAGS }}"
+  goos:
+  - linux
+  - darwin
+  - windows
+  goarch:
+  - amd64
+  - arm64
+  - ppc64le
+  ignore:
+  - goos: darwin
+    goarch: ppc64le
+  - goos: windows
+    goarch: ppc64le
+
 archives:
 - id: kubectl-rancher-bind
   builds:
   - kubectl-rancher-bind
   name_template: "kubectl-rancher-bind_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+- id: rancher-backend
+  builds:
+  - rancher-backend
+  name_template: "rancher-backend_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 release:
   prerelease: auto
   mode: keep-existing
