@@ -18,11 +18,16 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v3
       with:
-        go-version: v1.19
+        go-version: v1.21
     - name: Delete non-semver tags
       run: 'git tag -d $(git tag -l | grep -v "^v")'
     - name: Set LDFLAGS
       run: echo LDFLAGS="$(make ldflags)" | tee -a >> $GITHUB_ENV
+    - name: Convert actor name to lowercase and store in the env
+      run: |
+        echo "OWNER=$(echo $GITHUB_ACTOR | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+    - name: Set IMG value
+      run: echo IMG=ghcr.io/${{ env.OWNER }}/rancher-backend::${{ github.ref_name }}
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v3
       with:
