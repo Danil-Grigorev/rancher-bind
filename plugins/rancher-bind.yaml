@@ -8,42 +8,42 @@ spec:
   platforms:
     - bin: bin/kubectl-rancher-bind.exe
       uri: https://github.com/Danil-Grigorev/rancher-bind/releases/download/v0.0.3/kubectl-rancher-bind_0.0.3_windows_arm64.tar.gz
-      sha256: daaa17ee9373158131470b7bfb568c5bba687d648760272b35d688c8ec196276
+      sha256: f356ec030df1740301b71c7e3e8395708270d86a9ea1c4bd5695ce69f4de8c4f
       selector:
         matchLabels:
           os: windows
           arch: arm64
     - bin: bin/kubectl-rancher-bind.exe
       uri: https://github.com/Danil-Grigorev/rancher-bind/releases/download/v0.0.3/kubectl-rancher-bind_0.0.3_windows_amd64.tar.gz
-      sha256: 0def0b22d97fbd4f135c3c1242d7f9ce10f041d04a3415850a33998f2bd5a8b7
+      sha256: 2449e3396f07c9d8d71659da9b45e32eabe764fdcc3cf3e7b74b9e0db4d4c72b
       selector:
         matchLabels:
           os: windows
           arch: amd64
     - bin: bin/kubectl-rancher-bind
       uri: https://github.com/Danil-Grigorev/rancher-bind/releases/download/v0.0.3/kubectl-rancher-bind_0.0.3_linux_arm64.tar.gz
-      sha256: da587925c3e7eac827e8590009cef8d19ed922da14c098a783ecbbd611525dac
+      sha256: c6c03121265422ccce379e81ce69020fa806c38a84831a13b46ddf6093c75025
       selector:
         matchLabels:
           os: linux
           arch: arm64
     - bin: bin/kubectl-rancher-bind
       uri: https://github.com/Danil-Grigorev/rancher-bind/releases/download/v0.0.3/kubectl-rancher-bind_0.0.3_linux_amd64.tar.gz
-      sha256: b317f6e296dc95c7df001574bd3e9cc1c23d58f119771e375ab21510c3b41476
+      sha256: 079fb2eaad3bd24f79b5a9847d4a8748002fa676e7498c9027c6b45a944069f0
       selector:
         matchLabels:
           os: linux
           arch: amd64
     - bin: bin/kubectl-rancher-bind
       uri: https://github.com/Danil-Grigorev/rancher-bind/releases/download/v0.0.3/kubectl-rancher-bind_0.0.3_darwin_arm64.tar.gz
-      sha256: 40c3d42221f0086e1725d8c7c383335f8e8121fdbe8df33ecfa955463ad693d2
+      sha256: 826fcee0980b68cd8cd29b2d837606b29c2b64e2ded93b34cf553ba8937eee97
       selector:
         matchLabels:
           os: darwin
           arch: arm64
     - bin: bin/kubectl-rancher-bind
       uri: https://github.com/Danil-Grigorev/rancher-bind/releases/download/v0.0.3/kubectl-rancher-bind_0.0.3_darwin_amd64.tar.gz
-      sha256: 90a27fdc46ff8e23eff399175e1482b42b22f364b9d3984008036b37fbc50263
+      sha256: 0324f81f45bd21de51281c43a2a1fd5b1b0f1aad70d8a97c86c5b2b21da1ba9a
       selector:
         matchLabels:
           os: darwin
