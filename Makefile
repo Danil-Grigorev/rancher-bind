@@ -22,9 +22,13 @@ CONTAINER_TOOL ?= docker
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+# Path to main repo
+ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+
 ARCH := $(shell go env GOARCH)
 OS := $(shell go env GOOS)
 
+RELEASE_DIR := $(ROOT)/out
 KUBE_MAJOR_VERSION := 1
 KUBE_MINOR_VERSION := $(shell go mod edit -json | jq '.Require[] | select(.Path == "k8s.io/client-go") | .Version' --raw-output | sed "s/v[0-9]*\.\([0-9]*\).*/\1/")
 GIT_COMMIT := $(shell git rev-parse --short HEAD || echo 'local')
@@ -142,6 +146,9 @@ ifndef ignore-not-found
   ignore-not-found = false
 endif
 
+$(RELEASE_DIR):
+	mkdir -p $(RELEASE_DIR)
+
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
@@ -158,6 +165,10 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: release-manifests
+release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publish with a release
+	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/rancher-backend.yaml
 
 ##@ Build Dependencies
 
