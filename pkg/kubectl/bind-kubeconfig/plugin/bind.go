@@ -32,11 +32,14 @@ import (
 	"k8s.io/component-base/logs"
 	logsv1 "k8s.io/component-base/logs/api/v1"
 
+	"github.com/Danil-Grigorev/rancher-bind/internal/controller"
 	apis "github.com/Danil-Grigorev/rancher-bind/pkg/apis"
 	managementv3 "github.com/Danil-Grigorev/rancher-bind/pkg/apis/rancher/management/v3"
 
+	backend "github.com/Danil-Grigorev/rancher-bind/deploy/backend"
 	"github.com/kube-bind/kube-bind/pkg/kubectl/base"
 	apiyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/dynamic"
 	clientcmdapiv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	yaml "sigs.k8s.io/yaml"
 )
@@ -50,6 +53,7 @@ type BindAPIServiceOptions struct {
 
 	file     string
 	insecure bool
+	deploy   bool
 }
 
 // NewRancherBindOptions returns new BindAPIServiceOptions.
@@ -72,6 +76,7 @@ func (b *BindAPIServiceOptions) AddCmdFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVarP(&b.file, "file", "f", b.file, "A file with a GlobalRole manifest")
 	cmd.Flags().BoolVarP(&b.insecure, "insecure-skip-tls-verify", "i", b.insecure, "Sets the insecure-skip-tls-verify flag in the generated kubeconfig")
+	cmd.Flags().BoolVarP(&b.deploy, "deploy-backend", "d", b.deploy, "Deploy rancher-bind backend on the provider cluster")
 }
 
 // Complete ensures all fields are initialized.
@@ -108,6 +113,23 @@ func (b *BindAPIServiceOptions) Run(ctx context.Context) error {
 	serverUrl, err := GetServer(ctx, cl)
 	if err != nil {
 		return err
+	}
+
+	cfg, err := controller.NewConfig()
+	if err != nil {
+		return fmt.Errorf("unable to get config: %w", err)
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(cfg.ClientConfig)
+	if err != nil {
+		return err
+	}
+
+	if b.deploy {
+		fmt.Fprintf(b.Options.ErrOut, "🚀 Deploying rancher bind backend.\n") // nolint: errcheck
+		if err := backend.Bootstrap(ctx, cfg.KubeClient.Discovery(), dynamicClient); err != nil {
+			return err
+		}
 	}
 
 	password, hash, err := GenerateRandomPassword()

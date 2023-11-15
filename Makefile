@@ -28,7 +28,9 @@ ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 ARCH := $(shell go env GOARCH)
 OS := $(shell go env GOOS)
 
-RELEASE_DIR := $(ROOT)/out
+HACK_DIR := $(ROOT)/hack
+
+RELEASE_DIR := $(ROOT)/deploy/backend
 KUBE_MAJOR_VERSION := 1
 KUBE_MINOR_VERSION := $(shell go mod edit -json | jq '.Require[] | select(.Path == "k8s.io/client-go") | .Version' --raw-output | sed "s/v[0-9]*\.\([0-9]*\).*/\1/")
 GIT_COMMIT := $(shell git rev-parse --short HEAD || echo 'local')
@@ -58,7 +60,7 @@ require-%:
 	@if ! command -v $* 1> /dev/null 2>&1; then echo "$* not found in \$$PATH"; exit 1; fi
 
 build: WHAT ?= ./cmd/...
-build: require-jq require-go require-git ## Build the project
+build: require-jq require-go require-git release-manifests ## Build the project
 	GOOS=$(OS) GOARCH=$(ARCH) go build $(BUILDFLAGS) -ldflags="$(LDFLAGS)" -o bin/ $(WHAT)
 .PHONY: build
 
@@ -167,8 +169,10 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: release-manifests
-release-manifests: kustomize $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publish with a release
+release-manifests: kustomize $(KUSTOMIZE) yq $(RELEASE_DIR) ## Builds the manifests to publish with a release
 	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/rancher-backend.yaml
+	cd $(RELEASE_DIR) && $(HACK_DIR)/yq-split.sh $(YQ) rancher-backend.yaml
+	rm $(RELEASE_DIR)/rancher-backend.yaml
 
 ##@ Build Dependencies
 
@@ -186,6 +190,12 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.0.1
 CONTROLLER_TOOLS_VERSION ?= v0.12.0
+
+YQ_VER := v4.35.2
+YQ_BIN := yq
+YQ := $(LOCALBIN)/$(YQ_BIN)
+
+yq: $(YQ) ## Build a local copy of yq
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -206,3 +216,6 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+$(YQ): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/mikefarah/yq/v4@$(YQ_VER)
