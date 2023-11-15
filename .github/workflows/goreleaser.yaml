@@ -27,7 +27,7 @@ jobs:
       run: |
         echo "OWNER=$(echo $GITHUB_ACTOR | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
     - name: Set IMG value
-      run: echo IMG=ghcr.io/${{ env.OWNER }}/rancher-backend::${{ github.ref_name }}
+      run: echo IMG=ghcr.io/${{ env.OWNER }}/rancher-backend:${{ github.ref_name }} >> $GITHUB_ENV
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v3
       with:
