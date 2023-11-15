@@ -12,7 +12,7 @@ COPY go.sum go.sum
 RUN go mod download
 
 # Copy the go source
-COPY cmd/rancher-bind/main.go cmd/main.go
+COPY cmd/rancher-backend/main.go cmd/main.go
 # COPY api/ api/
 COPY internal/controller/ internal/controller/
 
