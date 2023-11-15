@@ -30,7 +30,7 @@ Functionality, such as fine-grained kubeconfig for rancher cluster is exposed vi
 
 ```shell
 # export KUBECONFIG=/tmp/rancher-kubeconfig
-kubectl krew index add bind https://github.com/Danil-Grigorev/rancher-bind.git
+kubectl krew index add rancher-bind https://github.com/Danil-Grigorev/rancher-bind.git
 kubectl krew install rancher-bind/rancher-bind
 kubectl rancher-bind -f ./example-role.yaml -d > kubeconfig
 cat kubeconfig
