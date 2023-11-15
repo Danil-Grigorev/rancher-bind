@@ -29,9 +29,10 @@ Functionality, such as fine-grained kubeconfig for rancher cluster is exposed vi
 ### Fine-grained kubeconfig for Rancher cluster
 
 ```shell
+# export KUBECONFIG=/tmp/rancher-kubeconfig
 kubectl krew index add bind https://github.com/Danil-Grigorev/rancher-bind.git
 kubectl krew install rancher-bind/rancher-bind
-kubectl rancher-bind -f ./example-role.yaml > kubeconfig
+kubectl rancher-bind -f ./example-role.yaml -d > kubeconfig
 cat kubeconfig
 # Outputs:
 # apiVersion: v1
@@ -39,4 +40,23 @@ cat kubeconfig
 # clusters:
 # - name: "local"
 # ...
+
+# export KUBECONFIG=/tmp/consumer-kubeconfig
+# Populate an api.yaml file with the CRD resource/group to export
+# Example:
+# cat api.yaml
+# kind: APIServiceExportRequest
+# apiVersion: kube-bind.io/v1alpha1
+# metadata:
+#   name: export-clusters
+# spec:
+#   resources:
+#     - group: "provisioning.cattle.io"
+#       resource: "clusters"
+
+kubectl krew index add bind https://github.com/kube-bind/krew-index.git
+kubectl krew install bind/bind
+kubectl bind apiservice --remote-kubeconfig ./kubeconfig --remote-namespace default -f api.yaml
 ```
+
+Apply the desired CR resource in a consumer cluster and watch the status changes!
