@@ -1,5 +1,4 @@
 resources:
-- kube-bind.io_apiservices.yaml
 - kube-bind.io_apiservicebindings.yaml
 - kube-bind.io_apiserviceexportrequests.yaml
 - kube-bind.io_apiserviceexports.yaml

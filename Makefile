@@ -88,9 +88,9 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	cp $(shell go run ./hack/tools/crd-resolver/main.go)/*.yaml config/crd/bases
-	$(CONTROLLER_GEN) rbac:roleName=manager-role paths="./..."
+manifests: controller-gen yaml-patch ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) crd rbac:roleName=manager-role output:crd:artifacts:config=./config/crd/bases paths="$(shell go run ./hack/tools/crd-resolver/main.go)/..."
+	$(HACK_DIR)/update-codegen.sh
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -169,7 +169,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: release-manifests
-release-manifests: kustomize $(KUSTOMIZE) yq $(RELEASE_DIR) ## Builds the manifests to publish with a release
+release-manifests: kustomize $(KUSTOMIZE) yq $(RELEASE_DIR) manifests ## Builds the manifests to publish with a release
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/rancher-backend.yaml
 	cd $(RELEASE_DIR) && $(HACK_DIR)/yq-split.sh $(YQ) rancher-backend.yaml
@@ -196,6 +196,11 @@ YQ_VER := v4.35.2
 YQ_BIN := yq
 YQ := $(LOCALBIN)/$(YQ_BIN)
 
+YAML_PATCH_VER ?= v0.0.11
+YAML_PATCH_BIN := yaml-patch
+YAML_PATCH := $(LOCALBIN)/$(YAML_PATCH_BIN)
+export YAML_PATCH # so hack scripts can use it
+
 yq: $(YQ) ## Build a local copy of yq
 
 .PHONY: kustomize
@@ -220,3 +225,6 @@ $(ENVTEST): $(LOCALBIN)
 
 $(YQ): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/mikefarah/yq/v4@$(YQ_VER)
+
+yaml-patch:
+	GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/pivotal-cf/yaml-patch/cmd/yaml-patch@$(YAML_PATCH_VER)

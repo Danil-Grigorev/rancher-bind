@@ -2,8 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.12.0
   name: apiserviceexports.kube-bind.io
 spec:
   group: kube-bind.io
@@ -263,6 +262,7 @@ spec:
                           - statusReplicasPath
                           type: object
                         status:
+                          default: {}
                           description: 'status indicates the custom resource should
                             serve a `/status` subresource. When enabled: 1. requests
                             to the custom resource primary endpoint ignore changes
@@ -395,9 +395,6 @@ spec:
         required:
         - spec
         type: object
-        x-kubernetes-validations:
-        - message: informerScope is immutable
-          rule: self.metadata.name == self.spec.names.plural+"."+self.spec.group
     served: true
     storage: true
     subresources:
