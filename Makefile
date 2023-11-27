@@ -88,7 +88,7 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen yaml-patch ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: modules controller-gen yaml-patch ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) crd rbac:roleName=manager-role output:crd:artifacts:config=./config/crd/bases paths="$(shell go run ./hack/tools/crd-resolver/main.go)/..."
 	$(HACK_DIR)/update-codegen.sh
 
@@ -103,6 +103,10 @@ fmt: ## Run go fmt against code.
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...
+
+.PHONY: modules
+modules: ## Run modules tasks
+	go mod tidy
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
