@@ -22,7 +22,7 @@ func init() {
 }
 
 func main() {
-	fmt.Printf("%s", getFilePathToAPI(root, "github.com/kube-bind", "kube-bind", "deploy/crd"))
+	fmt.Printf("%s", getFilePathToAPI(root, "github.com/kube-bind", "kube-bind", "pkg/apis/kubebind"))
 }
 
 func getFilePathToAPI(root, org, pkg, apis string) string {
